@@ -70,7 +70,63 @@ function systemEndpoints(app) {
   });
 
   app.get("/migrate", async (_, response) => {
-    response.sendStatus(200);
+    try {
+      const { validateTablePragmas, migratePostgreSQL } = require("../utils/database");
+      const dbUrl = process.env.DATABASE_URL || "";
+
+      // Определяем тип базы данных
+      const isPostgreSQL = dbUrl.startsWith("postgresql://");
+      const isSQLite = dbUrl.startsWith("file:");
+
+      let results = {
+        sqlite: null,
+        postgresql: null,
+      };
+
+      // Выполняем миграции для SQLite
+      if (isSQLite || (!isPostgreSQL && !isSQLite)) {
+        console.log("\x1b[34m[SQLITE MIGRATION]\x1b[0m Запуск миграций SQLite...");
+        try {
+          await validateTablePragmas(true);
+          results.sqlite = { success: true };
+          console.log("✅ Миграции SQLite выполнены");
+        } catch (error) {
+          console.error("❌ Ошибка миграций SQLite:", error.message);
+          results.sqlite = { success: false, error: error.message };
+        }
+      }
+
+      // Выполняем миграции для PostgreSQL
+      if (isPostgreSQL) {
+        console.log("\x1b[34m[POSTGRESQL MIGRATION]\x1b[0m Запуск миграций PostgreSQL...");
+        results.postgresql = await migratePostgreSQL();
+      }
+
+      // Возвращаем результат
+      const allSuccess =
+        (results.sqlite === null || results.sqlite.success) &&
+        (results.postgresql === null || results.postgresql.success);
+
+      if (allSuccess) {
+        response.status(200).json({
+          success: true,
+          message: "Миграции выполнены успешно",
+          results,
+        });
+      } else {
+        response.status(500).json({
+          success: false,
+          message: "Некоторые миграции завершились с ошибками",
+          results,
+        });
+      }
+    } catch (error) {
+      console.error("❌ Критическая ошибка при выполнении миграций:", error);
+      response.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
   });
 
   app.get("/env-dump", async (_, response) => {
@@ -190,17 +246,17 @@ function systemEndpoints(app) {
           // Для multi-user режима находим первого пользователя
           const { username } = reqBody(request);
           let existingUser;
-          
+
           if (username) {
             existingUser = await User._get({ username: String(username) });
           }
-          
+
           // Если пользователь не найден, берем первого доступного
           if (!existingUser) {
             const allUsers = await User.where({});
             existingUser = allUsers.length > 0 ? allUsers[0] : null;
           }
-          
+
           if (existingUser && !existingUser.suspended) {
             const sessionToken = makeJWT(
               { id: existingUser.id, username: existingUser.username },
@@ -214,7 +270,7 @@ function systemEndpoints(app) {
             });
             return;
           }
-          
+
           // Если нет пользователей, возвращаем ошибку
           response.status(200).json({
             valid: false,

@@ -109,8 +109,123 @@ async function setupTelemetry() {
   return;
 }
 
+// Миграция для PostgreSQL - создание таблицы event_logs
+async function migratePostgreSQL() {
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    
+    // Проверяем, что это PostgreSQL
+    if (!dbUrl || !dbUrl.startsWith('postgresql://')) {
+      console.log('\x1b[33m[POSTGRESQL MIGRATION SKIPPED]\x1b[0m DATABASE_URL не является PostgreSQL');
+      return { success: true, skipped: true };
+    }
+
+    // Определение строки подключения
+    let connectionString = dbUrl;
+    
+    // Если это внутренний адрес Railway, пытаемся использовать публичный
+    if (dbUrl.includes('railway.internal')) {
+      if (process.env.DATABASE_PUBLIC_URL) {
+        connectionString = process.env.DATABASE_PUBLIC_URL;
+        console.log('✅ Использую DATABASE_PUBLIC_URL для миграции');
+      } else if (process.env.RAILWAY_TCP_PROXY_DOMAIN && process.env.RAILWAY_TCP_PROXY_PORT) {
+        const user = process.env.PGUSER || process.env.POSTGRES_USER || 'postgres';
+        const password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+        const database = process.env.PGDATABASE || process.env.POSTGRES_DB || 'railway';
+        
+        if (password) {
+          connectionString = `postgresql://${user}:${password}@${process.env.RAILWAY_TCP_PROXY_DOMAIN}:${process.env.RAILWAY_TCP_PROXY_PORT}/${database}`;
+          console.log('✅ Построен публичный URL из переменных окружения');
+        }
+      }
+    }
+    // Если DATABASE_URL уже содержит публичный адрес (например, mainline.proxy.rlwy.net), используем его
+    else if (dbUrl.includes('.proxy.rlwy.net') || dbUrl.includes('.railway.app')) {
+      console.log('✅ DATABASE_URL содержит публичный адрес Railway, используем его');
+      connectionString = dbUrl;
+    }
+
+    const { Client } = require('pg');
+    const fs = require('fs');
+    const path = require('path');
+
+    // Чтение SQL скрипта
+    const sqlPath = path.join(__dirname, '../../prisma/migrations/create_event_logs_postgresql.sql');
+    let sql;
+    try {
+      sql = fs.readFileSync(sqlPath, 'utf8');
+    } catch (error) {
+      console.error(`\x1b[31m[POSTGRESQL MIGRATION ERROR]\x1b[0m Ошибка при чтении SQL файла: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    // Настройка клиента с поддержкой SSL для Railway PostgreSQL
+    // Railway использует postgres-ssl образ, который требует SSL соединения
+    // Определяем, нужен ли SSL по адресу подключения
+    const needsSSL = connectionString.includes('.proxy.rlwy.net') || 
+                     connectionString.includes('.railway.app') ||
+                     process.env.RAILWAY_TCP_PROXY_DOMAIN ||
+                     process.env.DATABASE_PUBLIC_URL;
+    
+    const clientConfig = {
+      connectionString: connectionString,
+      // Включаем SSL для публичных адресов Railway (postgres-ssl образ)
+      ssl: needsSSL ? {
+          rejectUnauthorized: false, // Railway использует самоподписанные сертификаты
+        } : undefined,
+    };
+    
+    if (needsSSL) {
+      console.log('🔒 Использую SSL соединение для Railway PostgreSQL');
+    }
+
+    const client = new Client(clientConfig);
+
+    try {
+      console.log('\x1b[34m[POSTGRESQL MIGRATION]\x1b[0m Подключаюсь к базе данных...');
+      await client.connect();
+      console.log('✅ Подключено к базе данных');
+
+      console.log('📝 Применяю миграцию event_logs...');
+      await client.query(sql);
+      console.log('✅ Миграция успешно применена!');
+
+      // Проверка существования таблицы
+      const result = await client.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'event_logs'
+      `);
+
+      if (result.rows.length > 0) {
+        console.log('✅ Таблица event_logs существует');
+      } else {
+        console.log('⚠️  Таблица event_logs не найдена после миграции');
+      }
+
+      return { success: true, skipped: false };
+    } catch (error) {
+      // Если таблица уже существует, это не критическая ошибка
+      if (error.message.includes('already exists') || error.message.includes('уже существует')) {
+        console.log('💡 Таблица event_logs уже существует, это нормально');
+        return { success: true, skipped: false, alreadyExists: true };
+      } else {
+        console.error(`\x1b[31m[POSTGRESQL MIGRATION ERROR]\x1b[0m ${error.message}`);
+        return { success: false, error: error.message };
+      }
+    } finally {
+      await client.end();
+    }
+  } catch (error) {
+    console.error(`\x1b[31m[POSTGRESQL MIGRATION ERROR]\x1b[0m ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   checkForMigrations,
   validateTablePragmas,
   setupTelemetry,
+  migratePostgreSQL,
 };
