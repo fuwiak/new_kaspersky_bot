@@ -207,8 +207,156 @@
   --theme-button-delete-hover-bg: #fee4e2;
 }
 
+[data-theme="retro"] {
+  --theme-loader: #39ff14;
+  --theme-bg-primary: #000000;
+  --theme-bg-secondary: #0d0d0d;
+  --theme-bg-sidebar: #000000;
+  --theme-bg-container: #000000;
+  --theme-bg-chat: #0d0d0d;
+  --theme-bg-chat-input: #0d0d0d;
+  --theme-text-primary: #39ff14;
+  --theme-text-secondary: #00ff41;
+  --theme-placeholder: #00cc33;
+  --theme-sidebar-item-default: rgba(57, 255, 20, 0.1);
+  --theme-sidebar-item-selected: rgba(57, 255, 20, 0.3);
+  --theme-sidebar-item-hover: rgba(57, 255, 20, 0.2);
+
+  --theme-sidebar-item-text-inactive: #00ff41;
+  --theme-sidebar-item-text-active: #39ff14;
+
+  --theme-sidebar-item-workspace-active: #39ff14;
+  --theme-sidebar-item-workspace-inactive: #00ff41;
+
+  --theme-sidebar-subitem-default: rgba(57, 255, 20, 0.05);
+  --theme-sidebar-subitem-selected: rgba(57, 255, 20, 0.2);
+  --theme-sidebar-thread-selected: rgba(57, 255, 20, 0.15);
+  --theme-sidebar-subitem-hover: rgba(57, 255, 20, 0.15);
+  --theme-sidebar-border: rgba(57, 255, 20, 0.4);
+
+  --theme-sidebar-footer-icon: rgba(57, 255, 20, 0.6);
+  --theme-sidebar-footer-icon-fill: #39ff14;
+  --theme-sidebar-footer-icon-hover: rgba(57, 255, 20, 0.9);
+
+  --theme-chat-input-border: #39ff14;
+  --theme-action-menu-bg: #0d0d0d;
+  --theme-action-menu-item-hover: rgba(57, 255, 20, 0.25);
+  --theme-settings-input-bg: #000000;
+  --theme-settings-input-placeholder: rgba(57, 255, 20, 0.6);
+  --theme-settings-input-active: rgba(57, 255, 20, 0.4);
+  --theme-settings-input-text: #39ff14;
+  --theme-modal-border: #39ff14;
+
+  --theme-button-primary: #39ff14;
+  --theme-button-primary-hover: #00ff41;
+
+  --theme-button-cta: #00ff41;
+
+  --theme-file-row-even: #000000;
+  --theme-file-row-odd: #0d0d0d;
+  --theme-file-row-selected-even: rgba(57, 255, 20, 0.25);
+  --theme-file-row-selected-odd: rgba(57, 255, 20, 0.2);
+  --theme-file-picker-hover: rgba(57, 255, 20, 0.25);
+
+  --theme-home-text: #39ff14;
+  --theme-home-text-secondary: #00ff41;
+  --theme-home-bg-card: #0d0d0d;
+  --theme-home-bg-button: #000000;
+  --theme-home-border: rgba(57, 255, 20, 0.4);
+  --theme-home-button-primary: #39ff14;
+  --theme-home-button-primary-hover: #00ff41;
+  --theme-home-button-secondary: #0d0d0d;
+  --theme-home-button-secondary-hover: rgba(57, 255, 20, 0.15);
+  --theme-home-button-secondary-text: #39ff14;
+  --theme-home-button-secondary-hover-text: #00ff41;
+  --theme-home-update-card-bg: #0d0d0d;
+  --theme-home-update-card-hover: rgba(57, 255, 20, 0.15);
+  --theme-home-update-source: #39ff14;
+
+  --theme-checklist-item-bg: rgba(0, 57, 20, 0.5);
+  --theme-checklist-item-bg-hover: rgba(0, 57, 20, 0.7);
+  --theme-checklist-item-text: #39ff14;
+  --theme-checklist-item-completed-bg: rgba(0, 57, 20, 0.8);
+  --theme-checklist-item-completed-text: #00ff41;
+  --theme-checklist-checkbox-fill: #39ff14;
+  --theme-checklist-checkbox-text: #000000;
+  --theme-checklist-item-hover: #39ff14;
+  --theme-checklist-checkbox-border: #39ff14;
+  --theme-checklist-button-border: #39ff14;
+  --theme-checklist-button-text: #39ff14;
+  --theme-checklist-button-hover-bg: rgba(57, 255, 20, 0.25);
+  --theme-checklist-button-hover-border: #00ff41;
+
+  --theme-home-button-secondary-border: #39ff14;
+  --theme-home-button-secondary-border-hover: #00ff41;
+
+  --theme-attachment-bg: #0d0d0d;
+  --theme-attachment-error-bg: rgba(255, 0, 0, 0.25);
+  --theme-attachment-success-bg: rgba(57, 255, 20, 0.15);
+  --theme-attachment-text: #39ff14;
+  --theme-attachment-text-secondary: #00ff41;
+  --theme-attachment-icon: #39ff14;
+  --theme-attachment-icon-spinner: #39ff14;
+  --theme-attachment-icon-spinner-bg: #000000;
+
+  --theme-button-text: #00ff41;
+  --theme-button-code-hover-text: #00ff41;
+  --theme-button-code-hover-bg: rgba(57, 255, 20, 0.15);
+  --theme-button-disable-hover-text: #ffaa00;
+  --theme-button-disable-hover-bg: rgba(255, 170, 0, 0.15);
+  --theme-button-delete-hover-text: #ff0000;
+  --theme-button-delete-hover-bg: rgba(255, 0, 0, 0.15);
+}
+
+[data-theme="retro"] * {
+  font-family: 'Courier New', 'Courier', Monaco, 'Courier Prime', monospace !important;
+}
+
+/* Неоновое свечение для текста в ретро-теме */
+[data-theme="retro"] h1,
+[data-theme="retro"] h2,
+[data-theme="retro"] h3,
+[data-theme="retro"] p,
+[data-theme="retro"] span,
+[data-theme="retro"] div,
+[data-theme="retro"] button,
+[data-theme="retro"] a {
+  text-shadow: 0 0 5px rgba(57, 255, 20, 0.5), 0 0 10px rgba(57, 255, 20, 0.3);
+}
+
+/* Неоновое свечение для границ */
+[data-theme="retro"] .border,
+[data-theme="retro"] [class*="border"] {
+  box-shadow: 0 0 3px rgba(57, 255, 20, 0.3);
+}
+
+/* Усиленное свечение для активных элементов */
+[data-theme="retro"] button:hover,
+[data-theme="retro"] a:hover,
+[data-theme="retro"] [class*="hover"]:hover {
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.8), 0 0 15px rgba(57, 255, 20, 0.5);
+  box-shadow: 0 0 5px rgba(57, 255, 20, 0.5), 0 0 10px rgba(57, 255, 20, 0.3);
+}
+
+[data-theme="retro"] .text-white {
+  color: var(--theme-text-primary);
+}
+
 [data-theme="light"] .text-white {
   color: var(--theme-text-primary);
+}
+
+[data-theme="retro"] .text-description,
+[data-theme="retro"] .text-white\/60 {
+  color: var(--theme-text-secondary);
+}
+
+[data-theme="retro"] .bg-theme-bg-secondary {
+  border: 1px solid var(--theme-sidebar-border);
+}
+
+[data-theme="retro"] .border-white\/10 {
+  border-color: var(--theme-sidebar-border);
 }
 
 [data-theme="light"] .text-description,
@@ -229,10 +377,16 @@ This is to override the default border color for the select and input elements
 in the onboarding flow when the theme is not light. This only applies to the
 onboarding flow since its background is dark and is the same fill as the inputs.
 */
-[data-layout="onboarding"] > * select:not([data-theme="light"]),
-[data-layout="onboarding"] > * input:not([data-theme="light"]),
-[data-layout="onboarding"] > * textarea:not([data-theme="light"]) {
+[data-layout="onboarding"] > * select:not([data-theme="light"]):not([data-theme="retro"]),
+[data-layout="onboarding"] > * input:not([data-theme="light"]):not([data-theme="retro"]),
+[data-layout="onboarding"] > * textarea:not([data-theme="light"]):not([data-theme="retro"]) {
   border: 1px solid #ffffff;
+}
+
+[data-layout="onboarding"][data-theme="retro"] > * select,
+[data-layout="onboarding"][data-theme="retro"] > * input,
+[data-layout="onboarding"][data-theme="retro"] > * textarea {
+  border: 1px solid #00ff00;
 }
 
 html,
@@ -557,6 +711,10 @@ a {
   fill: #008eff;
 }
 
+[data-theme="retro"] .grid-loader > circle {
+  fill: #00ff00;
+}
+
 dialog {
   pointer-events: none;
   opacity: 0;
@@ -576,8 +734,18 @@ dialog::backdrop {
   backdrop-filter: blur(2px);
 }
 
+[data-theme="retro"] dialog::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(2px);
+}
+
 .backdrop {
   background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+[data-theme="retro"] .backdrop {
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(2px);
 }
 
@@ -628,6 +796,10 @@ dialog::backdrop {
   fill: white;
 }
 
+[data-theme="retro"] .white-fill {
+  fill: #00ff00;
+}
+
 .tip:before {
   content: "";
   display: block;
@@ -645,8 +817,16 @@ dialog::backdrop {
   top: 100%;
 }
 
+[data-theme="retro"] .tip:before {
+  border-top: 8px solid rgba(0, 255, 0, 0.5);
+}
+
 .user-reply > div:first-of-type {
   border: 2px solid white;
+}
+
+[data-theme="retro"] .user-reply > div:first-of-type {
+  border: 2px solid #00ff00;
 }
 
 .reply > *:last-child::after {
@@ -654,6 +834,10 @@ dialog::backdrop {
   animation: blink 1.5s steps(1) infinite;
   color: white;
   font-size: 14px;
+}
+
+[data-theme="retro"] .reply > *:last-child::after {
+  color: #00ff00;
 }
 
 @keyframes blink {
@@ -680,6 +864,11 @@ dialog::backdrop {
   @apply !bg-black !text-white !py-2 !px-3 !rounded-md;
 }
 
+[data-theme="retro"] .tooltip {
+  @apply !bg-black !text-[#00ff00] !py-2 !px-3 !rounded-md;
+  border: 1px solid #00ff00;
+}
+
 .Toastify__toast-body {
   white-space: pre-line;
 }
@@ -702,6 +891,10 @@ dialog::backdrop {
 
 .input-label {
   @apply text-[14px] font-bold text-white;
+}
+
+[data-theme="retro"] .input-label {
+  @apply text-[14px] font-bold text-[#00ff00];
 }
 
 /**
@@ -791,6 +984,12 @@ dialog::backdrop {
   .markdown table td {
     padding: 10px;
   }
+}
+
+[data-theme="retro"] .markdown table,
+[data-theme="retro"] .markdown table th,
+[data-theme="retro"] .markdown table td {
+  color: #00ff00;
 }
 
 [data-theme="light"] .markdown table,
@@ -910,6 +1109,11 @@ dialog::backdrop {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+[data-theme="retro"] .file-row.selected:nth-child(even),
+[data-theme="retro"] .file-row.selected:nth-child(odd) {
+  border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+}
+
 [data-theme="light"] .file-row.selected:nth-child(even),
 [data-theme="light"] .file-row.selected:nth-child(odd) {
   border-bottom: 1px solid rgba(222, 222, 222, 0.5);
@@ -967,6 +1171,10 @@ does not extend the close button beyond the viewport. */
 /* Recharts rendering styles */
 .recharts-text > * {
   fill: #fff;
+}
+
+[data-theme="retro"] .recharts-text > * {
+  fill: #00ff00;
 }
 
 [data-theme="light"] .recharts-text > * {
@@ -1033,6 +1241,10 @@ does not extend the close button beyond the viewport. */
 
 .search-input::-webkit-search-cancel-button {
   filter: grayscale(100%) invert(1) brightness(100) opacity(0.5);
+}
+
+[data-theme="retro"] .search-input::-webkit-search-cancel-button {
+  filter: grayscale(100%) invert(1) brightness(100) hue-rotate(120deg) opacity(0.5);
 }
 
 [data-theme="light"] .search-input::-webkit-search-cancel-button {

@@ -47,11 +47,35 @@ export function usePasswordModal(notry = false) {
       }
 
       const settings = await System.keys();
+      
+      // Если RequiresAuth отключен, автоматически получаем токен
+      const requiresAuth = settings?.RequiresAuth || false;
+      
       if (settings?.MultiUserMode) {
         const currentToken = window.localStorage.getItem(AUTH_TOKEN);
         if (!!currentToken) {
           const valid = notry ? false : await System.checkAuth(currentToken);
           if (!valid) {
+            // Если RequiresAuth отключен, автоматически получаем новый токен
+            if (!requiresAuth) {
+              try {
+                const result = await System.requestToken({ username: "" });
+                if (result.valid && result.token) {
+                  window.localStorage.setItem(AUTH_TOKEN, result.token);
+                  if (result.user) {
+                    window.localStorage.setItem(AUTH_USER, JSON.stringify(result.user));
+                  }
+                  setAuth({
+                    loading: false,
+                    requiresAuth: false,
+                    mode: "multi",
+                  });
+                  return;
+                }
+              } catch (e) {
+                console.error("Auto-login failed:", e);
+              }
+            }
             setAuth({
               loading: false,
               requiresAuth: true,
@@ -70,6 +94,26 @@ export function usePasswordModal(notry = false) {
             return;
           }
         } else {
+          // Если RequiresAuth отключен, автоматически получаем токен
+          if (!requiresAuth) {
+            try {
+              const result = await System.requestToken({ username: "" });
+              if (result.valid && result.token) {
+                window.localStorage.setItem(AUTH_TOKEN, result.token);
+                if (result.user) {
+                  window.localStorage.setItem(AUTH_USER, JSON.stringify(result.user));
+                }
+                setAuth({
+                  loading: false,
+                  requiresAuth: false,
+                  mode: "multi",
+                });
+                return;
+              }
+            } catch (e) {
+              console.error("Auto-login failed:", e);
+            }
+          }
           setAuth({
             loading: false,
             requiresAuth: true,
@@ -80,7 +124,6 @@ export function usePasswordModal(notry = false) {
       } else {
         // Running token check in single user Auth mode.
         // If Single user Auth is disabled - skip check
-        const requiresAuth = settings?.RequiresAuth || false;
         if (!requiresAuth) {
           setAuth({
             loading: false,
@@ -94,6 +137,23 @@ export function usePasswordModal(notry = false) {
         if (!!currentToken) {
           const valid = notry ? false : await System.checkAuth(currentToken);
           if (!valid) {
+            // Если RequiresAuth отключен, автоматически получаем новый токен
+            if (!requiresAuth) {
+              try {
+                const result = await System.requestToken({ password: "" });
+                if (result.valid && result.token) {
+                  window.localStorage.setItem(AUTH_TOKEN, result.token);
+                  setAuth({
+                    loading: false,
+                    requiresAuth: false,
+                    mode: "single",
+                  });
+                  return;
+                }
+              } catch (e) {
+                console.error("Auto-login failed:", e);
+              }
+            }
             setAuth({
               loading: false,
               requiresAuth: true,
@@ -112,6 +172,23 @@ export function usePasswordModal(notry = false) {
             return;
           }
         } else {
+          // Если RequiresAuth отключен, автоматически получаем токен
+          if (!requiresAuth) {
+            try {
+              const result = await System.requestToken({ password: "" });
+              if (result.valid && result.token) {
+                window.localStorage.setItem(AUTH_TOKEN, result.token);
+                setAuth({
+                  loading: false,
+                  requiresAuth: false,
+                  mode: "single",
+                });
+                return;
+              }
+            } catch (e) {
+              console.error("Auto-login failed:", e);
+            }
+          }
           setAuth({
             loading: false,
             requiresAuth: true,

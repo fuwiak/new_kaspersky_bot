@@ -201,27 +201,42 @@ export default forwardRef(function (
     return (
       <div className="flex flex-col h-full md:mt-0 pb-44 md:pb-40 w-full justify-end items-center">
         <div className="flex flex-col items-center md:items-start md:max-w-[600px] w-full px-4">
-          <p className="text-white/60 text-lg font-base py-4">
-            {t("chat_window.welcome")}
-          </p>
-          {!user || user.role !== "default" ? (
-            <p className="w-full items-center text-white/60 text-lg font-base flex flex-col md:flex-row gap-x-1">
+          <div className="w-full border border-theme-home-border rounded-lg bg-theme-home-bg-card p-6 md:p-8 mb-4 shadow-lg">
+            <p className="text-white text-xl font-semibold mb-6 pb-4 border-b border-theme-home-border">
+              {t("chat_window.welcome")}
+            </p>
+            <p className="text-gray-400 text-base font-base mb-4">
               {t("chat_window.get_started")}
-              <span
-                className="underline font-medium cursor-pointer"
-                onClick={showModal}
-              >
-                {t("chat_window.upload")}
-              </span>
-              {t("chat_window.or")}{" "}
-              <b className="font-medium italic">{t("chat_window.send_chat")}</b>
             </p>
-          ) : (
-            <p className="w-full items-center text-white/60 text-lg font-base flex flex-col md:flex-row gap-x-1">
-              {t("chat_window.get_started_default")}{" "}
-              <b className="font-medium italic">{t("chat_window.send_chat")}</b>
-            </p>
-          )}
+            <div className="flex flex-col md:flex-row gap-4">
+              {!user || user.role !== "default" ? (
+                <>
+                  <div 
+                    className="flex-1 border border-theme-home-border rounded-lg bg-theme-home-bg-button p-4 hover:border-theme-button-primary transition-all duration-200 cursor-pointer group"
+                    onClick={showModal}
+                  >
+                    <p className="text-gray-400 text-sm mb-1">
+                      {t("chat_window.get_started")}
+                    </p>
+                    <p className="text-gray-400 font-medium transition-colors duration-200">
+                      {t("chat_window.upload")}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center text-white/40 text-sm my-2 md:my-0">
+                    {t("chat_window.or")}
+                  </div>
+                </>
+              ) : null}
+              <div className="flex-1 border border-theme-home-border rounded-lg bg-theme-home-bg-button p-4 hover:border-theme-button-primary transition-all duration-200">
+                <p className="text-gray-400 text-sm mb-1">
+                  {!user || user.role !== "default" ? "" : t("chat_window.get_started_default")}
+                </p>
+                <p className="text-gray-400 font-medium">
+                  {t("chat_window.send_chat")}
+                </p>
+              </div>
+            </div>
+          </div>
           <WorkspaceChatSuggestions
             suggestions={workspace?.suggestedMessages ?? []}
             sendSuggestion={handleSendSuggestedMessage}

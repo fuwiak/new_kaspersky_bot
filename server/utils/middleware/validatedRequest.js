@@ -69,6 +69,17 @@ async function validatedRequest(request, response, next) {
 }
 
 async function validateMultiUserRequest(request, response, next) {
+  // В development режиме пропускаем проверку аутентификации
+  if (process.env.NODE_ENV === "development") {
+    // Пытаемся найти первого пользователя для установки в locals
+    const allUsers = await User.where({});
+    if (allUsers.length > 0) {
+      response.locals.user = allUsers[0];
+    }
+    next();
+    return;
+  }
+
   const auth = request.header("Authorization");
   const token = auth ? auth.split(" ")[1] : null;
 

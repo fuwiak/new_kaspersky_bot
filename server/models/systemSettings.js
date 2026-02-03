@@ -215,7 +215,7 @@ const SystemSettings = {
       // --------------------------------------------------------
       // General Settings
       // --------------------------------------------------------
-      RequiresAuth: !!process.env.AUTH_TOKEN,
+      RequiresAuth: process.env.NODE_ENV === "development" ? false : !!process.env.AUTH_TOKEN,
       AuthToken: !!process.env.AUTH_TOKEN,
       JWTSecret: !!process.env.JWT_SECRET,
       StorageDir: process.env.STORAGE_DIR,

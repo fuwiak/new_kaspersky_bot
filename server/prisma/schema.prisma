@@ -2,9 +2,8 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Use PostgreSQL by default (recommended for Railway/production)
-// Railway automatically provides DATABASE_URL when PostgreSQL plugin is added
-// For SQLite, set DATABASE_URL to: "file:../storage/anythingllm.db"
+// Use PostgreSQL for production (Railway automatically provides DATABASE_URL)
+// Railway automatically sets DATABASE_URL when PostgreSQL service is added
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

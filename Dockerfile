@@ -48,8 +48,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
 # Build frontend
 FROM --platform=$BUILDPLATFORM node:18-slim AS frontend-build
 WORKDIR /app/frontend
-COPY ./frontend/package.json ./
-COPY ./frontend/yarn.lock ./
+COPY ./frontend/package.json ./frontend/yarn.lock ./
 # Install dependencies (warnings are non-critical)
 RUN yarn install --network-timeout 100000 && yarn cache clean
 COPY ./frontend/ ./

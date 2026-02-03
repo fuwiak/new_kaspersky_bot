@@ -56,12 +56,7 @@ export default function SettingsSidebar() {
             <List className="h-6 w-6" />
           </button>
           <div className="flex items-center justify-center flex-grow">
-            <img
-              src={logo}
-              alt="Logo"
-              className="block mx-auto h-6 w-auto"
-              style={{ maxHeight: "40px", objectFit: "contain" }}
-            />
+            <span className="text-white text-base font-semibold">Kaspersky RAG Dashboard</span>
           </div>
           <div className="w-12"></div>
         </div>
@@ -87,12 +82,7 @@ export default function SettingsSidebar() {
               {/* Header Information */}
               <div className="flex w-full items-center justify-between gap-x-4">
                 <div className="flex shrink-1 w-fit items-center justify-start">
-                  <img
-                    src={logo}
-                    alt="Logo"
-                    className="rounded w-full max-h-[40px]"
-                    style={{ objectFit: "contain" }}
-                  />
+                  <span className="text-white text-base font-semibold">Kaspersky RAG Dashboard</span>
                 </div>
                 <div className="flex gap-x-2 items-center text-slate-500 shrink-0">
                   <a
@@ -141,12 +131,7 @@ export default function SettingsSidebar() {
           to={paths.home()}
           className="flex shrink-0 max-w-[55%] items-center justify-start mx-[38px] my-[18px]"
         >
-          <img
-            src={logo}
-            alt="Logo"
-            className="rounded max-h-[24px]"
-            style={{ objectFit: "contain" }}
-          />
+          <span className="text-white text-lg font-semibold">Kaspersky RAG Dashboard</span>
         </Link>
         <div
           ref={sidebarRef}

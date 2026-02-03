@@ -184,6 +184,60 @@ function systemEndpoints(app) {
     try {
       const bcrypt = require("bcryptjs");
 
+      // В development режиме автоматически пропускаем проверку пароля
+      if (process.env.NODE_ENV === "development") {
+        if (await SystemSettings.isMultiUserMode()) {
+          // Для multi-user режима находим первого пользователя
+          const { username } = reqBody(request);
+          let existingUser;
+          
+          if (username) {
+            existingUser = await User._get({ username: String(username) });
+          }
+          
+          // Если пользователь не найден, берем первого доступного
+          if (!existingUser) {
+            const allUsers = await User.where({});
+            existingUser = allUsers.length > 0 ? allUsers[0] : null;
+          }
+          
+          if (existingUser && !existingUser.suspended) {
+            const sessionToken = makeJWT(
+              { id: existingUser.id, username: existingUser.username },
+              process.env.JWT_EXPIRY || "30d"
+            );
+            response.status(200).json({
+              valid: true,
+              user: User.filterFields(existingUser),
+              token: sessionToken,
+              message: null,
+            });
+            return;
+          }
+          
+          // Если нет пользователей, возвращаем ошибку
+          response.status(200).json({
+            valid: false,
+            user: null,
+            token: null,
+            message: "No users found in development mode.",
+          });
+          return;
+        } else {
+          // Для single-user режима просто возвращаем токен без проверки пароля
+          const dummyPassword = "dev-password";
+          response.status(200).json({
+            valid: true,
+            token: makeJWT(
+              { p: new EncryptionManager().encrypt(dummyPassword) },
+              process.env.JWT_EXPIRY || "30d"
+            ),
+            message: null,
+          });
+          return;
+        }
+      }
+
       if (await SystemSettings.isMultiUserMode()) {
         if (simpleSSOLoginDisabled()) {
           response.status(403).json({

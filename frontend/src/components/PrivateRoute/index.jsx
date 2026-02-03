@@ -52,13 +52,46 @@ function useIsAuthenticated() {
       // Multi-user mode checks
       const localUser = localStorage.getItem(AUTH_USER);
       const localAuthToken = localStorage.getItem(AUTH_TOKEN);
+      
+      // Если RequiresAuth отключен, автоматически получаем токен, если его нет
       if (!localUser || !localAuthToken) {
+        if (!RequiresAuth) {
+          try {
+            const result = await System.requestToken({ username: "" });
+            if (result.valid && result.token) {
+              localStorage.setItem(AUTH_TOKEN, result.token);
+              if (result.user) {
+                localStorage.setItem(AUTH_USER, JSON.stringify(result.user));
+              }
+              setIsAuthed(true);
+              return;
+            }
+          } catch (e) {
+            console.error("Auto-login failed:", e);
+          }
+        }
         setIsAuthed(false);
         return;
       }
 
       const isValid = await validateSessionTokenForUser();
       if (!isValid) {
+        // Если RequiresAuth отключен, пытаемся получить новый токен
+        if (!RequiresAuth) {
+          try {
+            const result = await System.requestToken({ username: "" });
+            if (result.valid && result.token) {
+              localStorage.setItem(AUTH_TOKEN, result.token);
+              if (result.user) {
+                localStorage.setItem(AUTH_USER, JSON.stringify(result.user));
+              }
+              setIsAuthed(true);
+              return;
+            }
+          } catch (e) {
+            console.error("Auto-login failed:", e);
+          }
+        }
         localStorage.removeItem(AUTH_USER);
         localStorage.removeItem(AUTH_TOKEN);
         localStorage.removeItem(AUTH_TIMESTAMP);

@@ -193,6 +193,13 @@ export default {
           '"Segoe UI Emoji"',
           '"Segoe UI Symbol"',
           '"Noto Color Emoji"'
+        ],
+        mono: [
+          "'Courier New'",
+          "Courier",
+          "Monaco",
+          "'Courier Prime'",
+          "monospace"
         ]
       },
       animation: {

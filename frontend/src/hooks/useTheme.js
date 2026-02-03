@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 const availableThemes = {
   default: "Default",
   light: "Light",
+  retro: "Retro",
 };
 
 /**
  * Determines the current theme of the application
- * @returns {{theme: ('default' | 'light'), setTheme: function, availableThemes: object}} The current theme, a function to set the theme, and the available themes
+ * @returns {{theme: ('default' | 'light' | 'retro'), setTheme: function, availableThemes: object}} The current theme, a function to set the theme, and the available themes
  */
 export function useTheme() {
   const [theme, _setTheme] = useState(() => {
