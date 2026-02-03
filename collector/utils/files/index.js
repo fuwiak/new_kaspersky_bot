@@ -2,6 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const { MimeDetector } = require("./mime");
 
+// Set default STORAGE_DIR if not provided (for production mode)
+if (!process.env.STORAGE_DIR && process.env.NODE_ENV !== "development") {
+  process.env.STORAGE_DIR = path.resolve(__dirname, "../../../server/storage");
+}
+
 /**
  * The folder where documents are stored to be stored when
  * processed by the collector.
@@ -9,7 +14,7 @@ const { MimeDetector } = require("./mime");
 const documentsFolder =
   process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../../server/storage/documents`)
-    : path.resolve(process.env.STORAGE_DIR, `documents`);
+    : path.resolve(process.env.STORAGE_DIR || path.resolve(__dirname, "../../../server/storage"), `documents`);
 
 /**
  * The folder where direct uploads are stored to be stored when
@@ -19,7 +24,7 @@ const documentsFolder =
 const directUploadsFolder =
   process.env.NODE_ENV === "development"
     ? path.resolve(__dirname, `../../../server/storage/direct-uploads`)
-    : path.resolve(process.env.STORAGE_DIR, `direct-uploads`);
+    : path.resolve(process.env.STORAGE_DIR || path.resolve(__dirname, "../../../server/storage"), `direct-uploads`);
 
 /**
  * Checks if a file is text by checking the mime type and then falling back to buffer inspection.

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Check if STORAGE_DIR is set
+# Check if STORAGE_DIR is set, if not set default value
 if [ -z "$STORAGE_DIR" ]; then
     echo "================================================================"
     echo "⚠️  ⚠️  ⚠️  WARNING: STORAGE_DIR environment variable is not set! ⚠️  ⚠️  ⚠️"
@@ -10,14 +10,16 @@ if [ -z "$STORAGE_DIR" ]; then
     echo "the application will not have a persistent storage location."
     echo "It can also result in weird errors in various parts of the application."
     echo ""
-    echo "Please run the container with the official docker command at"
-    echo "https://docs.anythingllm.com/installation-docker/quickstart"
+    echo "Setting default value: /app/server/storage"
+    echo "For production, it's recommended to set STORAGE_DIR to a persistent volume"
     echo ""
     echo "⚠️  ⚠️  ⚠️  WARNING: STORAGE_DIR environment variable is not set! ⚠️  ⚠️  ⚠️"
     echo "================================================================"
+    export STORAGE_DIR="/app/server/storage"
 fi
 
-# Ensure storage directory exists for SQLite database (if needed)
+# Ensure storage directory exists
+mkdir -p "$STORAGE_DIR"
 mkdir -p /app/server/storage
 
 # Set DATABASE_URL if not provided (default to SQLite for local development)

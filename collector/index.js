@@ -181,6 +181,11 @@ app.get("/accepts", function (_, response) {
   response.status(200).json(ACCEPTED_MIMES);
 });
 
+// Health check endpoint for server to verify collector is ready
+app.get("/ping", function (_, response) {
+  response.status(200).json({ status: "ok", service: "collector" });
+});
+
 app.all("*", function (_, response) {
   response.sendStatus(200);
 });

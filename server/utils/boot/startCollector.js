@@ -18,6 +18,9 @@ async function startCollector() {
     console.log(
       "[CollectorManager] Skipping collector auto-start in development mode"
     );
+    console.log(
+      "[CollectorManager] In development, start collector manually with: cd collector && yarn dev"
+    );
     return true;
   }
 
@@ -85,22 +88,32 @@ function startCollectorProcess(collectorPath, port) {
       detached: false,
     });
 
-    // Handle collector stdout
+    // Handle collector stdout with [COLLECTOR] prefix
     collector.stdout.on("data", (data) => {
       const lines = data.toString().trim().split("\n");
       lines.forEach((line) => {
         if (line.trim()) {
-          console.log(`[collector] ${line}`);
+          // Если строка уже содержит префикс [COLLECTOR], не добавляем его снова
+          if (line.includes("[COLLECTOR]")) {
+            console.log(line);
+          } else {
+            console.log(`[COLLECTOR] ${line}`);
+          }
         }
       });
     });
 
-    // Handle collector stderr
+    // Handle collector stderr with [COLLECTOR] prefix
     collector.stderr.on("data", (data) => {
       const lines = data.toString().trim().split("\n");
       lines.forEach((line) => {
         if (line.trim()) {
-          console.error(`[collector] ${line}`);
+          // Если строка уже содержит префикс [COLLECTOR], не добавляем его снова
+          if (line.includes("[COLLECTOR]")) {
+            console.error(line);
+          } else {
+            console.error(`[COLLECTOR] ${line}`);
+          }
         }
       });
     });
@@ -117,16 +130,20 @@ function startCollectorProcess(collectorPath, port) {
       resolve(false);
     });
 
-    // Wait for collector to be ready
+    // Wait for collector to be ready (max 30 seconds)
+    console.log(`[CollectorManager] Waiting for collector to be ready (max 30 seconds)...`);
     waitForCollector(port, 30000)
       .then((ready) => {
         if (ready) {
           console.log(
-            `[CollectorManager] ✓ Collector is ready on port ${port}`
+            `[CollectorManager] ✓ Collector is ready and responding on port ${port}`
           );
         } else {
           console.error(
-            `[CollectorManager] ✗ Collector failed to start within timeout`
+            `[CollectorManager] ✗ Collector failed to start within 30 seconds timeout`
+          );
+          console.error(
+            `[CollectorManager] Server will continue, but file uploads may not work`
           );
         }
         resolve(ready);
@@ -139,7 +156,7 @@ function startCollectorProcess(collectorPath, port) {
 }
 
 /**
- * Checks if collector is healthy
+ * Checks if collector is healthy by checking /ping endpoint
  * @param {number} port - Collector port
  * @returns {Promise<boolean>}
  */
@@ -149,11 +166,12 @@ function checkCollectorHealth(port) {
       {
         hostname: "127.0.0.1",
         port: port,
-        path: "/",
+        path: "/ping",
         method: "GET",
         timeout: 2000,
       },
       (res) => {
+        // Collector /ping endpoint should return 200
         resolve(res.statusCode === 200);
       }
     );
@@ -171,21 +189,41 @@ function checkCollectorHealth(port) {
 /**
  * Waits for collector to be ready
  * @param {number} port - Collector port
- * @param {number} timeout - Timeout in milliseconds
+ * @param {number} timeout - Timeout in milliseconds (default: 30000 = 30 seconds)
  * @returns {Promise<boolean>}
  */
 async function waitForCollector(port, timeout = 30000) {
   const startTime = Date.now();
   const checkInterval = 500;
+  let attempt = 0;
+  const maxAttempts = Math.ceil(timeout / checkInterval);
 
   while (Date.now() - startTime < timeout) {
+    attempt++;
     const isReady = await checkCollectorHealth(port);
     if (isReady) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(
+        `[CollectorManager] Collector became ready after ${elapsed}s (attempt ${attempt}/${maxAttempts})`
+      );
       return true;
     }
+    
+    // Log progress every 5 seconds
+    if (attempt % 10 === 0) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(
+        `[CollectorManager] Waiting for collector... (${elapsed}s / ${(timeout / 1000).toFixed(0)}s)`
+      );
+    }
+    
     await new Promise((r) => setTimeout(r, checkInterval));
   }
 
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.error(
+    `[CollectorManager] Timeout: Collector did not become ready after ${elapsed}s`
+  );
   return false;
 }
 

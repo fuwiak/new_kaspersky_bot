@@ -23,8 +23,18 @@ async function bootSSL(app, port = 3001) {
     );
 
     // Start collector first (in production/docker mode)
+    // Server will wait up to 30 seconds for collector to be ready before starting
+    console.log("[Boot] Starting collector before server startup...");
     try {
-      await startCollector();
+      const collectorReady = await startCollector();
+      if (collectorReady) {
+        console.log("[Boot] ✓ Collector is ready, starting server...");
+      } else {
+        console.warn(
+          "[Boot] ⚠ Collector is not ready, but server will start anyway"
+        );
+        console.warn("[Boot] ⚠ File uploads may not work until collector is available");
+      }
     } catch (error) {
       console.error(
         "[Boot] Failed to start collector:",
@@ -73,8 +83,18 @@ async function bootHTTP(app, port = 3001) {
 
   // Start collector first (in production/docker mode)
   // This ensures collector is available when server starts accepting requests
+  // Server will wait up to 30 seconds for collector to be ready before starting
+  console.log("[Boot] Starting collector before server startup...");
   try {
-    await startCollector();
+    const collectorReady = await startCollector();
+    if (collectorReady) {
+      console.log("[Boot] ✓ Collector is ready, starting server...");
+    } else {
+      console.warn(
+        "[Boot] ⚠ Collector is not ready, but server will start anyway"
+      );
+      console.warn("[Boot] ⚠ File uploads may not work until collector is available");
+    }
   } catch (error) {
     console.error(
       "[Boot] Failed to start collector:",
