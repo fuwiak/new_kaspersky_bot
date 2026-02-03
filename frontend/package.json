@@ -12,6 +12,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
     "@lobehub/icons": "^4.0.3",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@mintplex-labs/piper-tts-web": "^1.0.4",
