@@ -6,53 +6,53 @@ process.env.NODE_ENV === "development"
 if (process.env.NODE_ENV === "development") {
   const path = require("path");
   const fs = require("fs");
-  
+
   // DATABASE_URL для SQLite
   if (!process.env.DATABASE_URL) {
     const storageDir = path.resolve(__dirname, "storage");
-    
+
     // Создаем директорию storage, если её нет
     if (!fs.existsSync(storageDir)) {
       fs.mkdirSync(storageDir, { recursive: true });
     }
-    
+
     // Устанавливаем DATABASE_URL для SQLite
     // Используем относительный путь для Prisma (от корня server/)
     const dbPath = path.join(storageDir, "anythingllm.db");
     const relativeDbPath = path.relative(__dirname, dbPath);
     process.env.DATABASE_URL = `file:./${relativeDbPath}`;
     console.log(`[Development] DATABASE_URL не установлен, используем SQLite: ${process.env.DATABASE_URL}`);
-    
+
     // Создаем файл базы данных, если его нет (Prisma создаст его автоматически, но лучше убедиться)
     if (!fs.existsSync(dbPath)) {
       fs.writeFileSync(dbPath, "");
     }
   }
-  
+
   // Устанавливаем placeholder значения для других переменных, если они не установлены
   if (!process.env.JWT_SECRET) {
     process.env.JWT_SECRET = "dev-jwt-secret-change-in-production";
   }
-  
+
   if (!process.env.AUTH_TOKEN) {
     // В development режиме пароль не требуется, но AUTH_TOKEN может быть нужен для некоторых проверок
     process.env.AUTH_TOKEN = "dev-auth-token";
   }
-  
+
   if (!process.env.STORAGE_DIR) {
     process.env.STORAGE_DIR = path.resolve(__dirname, "storage");
   }
-  
+
   // Векторная база данных - используем lancedb по умолчанию для локальной разработки
   if (!process.env.VECTOR_DB) {
     process.env.VECTOR_DB = "lancedb";
   }
-  
+
   // Embedding engine - используем native по умолчанию
   if (!process.env.EMBEDDING_ENGINE) {
     process.env.EMBEDDING_ENGINE = "native";
   }
-  
+
   // LLM Provider - можно оставить пустым или установить placeholder
   if (!process.env.LLM_PROVIDER) {
     // Оставляем пустым, пользователь настроит через UI
