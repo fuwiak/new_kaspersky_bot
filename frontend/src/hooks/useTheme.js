@@ -13,7 +13,7 @@ const availableThemes = {
  */
 export function useTheme() {
   const [theme, _setTheme] = useState(() => {
-    return localStorage.getItem("theme") || "default";
+    return localStorage.getItem("theme") || "retro";
   });
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function useTheme() {
     if (!window.matchMedia) return;
     if (window.matchMedia("(prefers-color-scheme: light)").matches)
       return _setTheme("light");
-    _setTheme("default");
+    _setTheme("retro");
   }, []);
 
   useEffect(() => {
