@@ -87,10 +87,10 @@ async function asXlsx({
       // Определяем размер батча в зависимости от количества листов
       const BATCH_SIZE = workSheetsFromFile.length > 20 ? 3 : workSheetsFromFile.length > 10 ? 5 : 10;
       const BATCH_DELAY_MS = 50; // Пауза между батчами в миллисекундах
-      
+
       console.log(`[XLSX] [${timestamp}] Processing ${workSheetsFromFile.length} sheet(s) in batches of ${BATCH_SIZE}...`);
       const processStartTime = Date.now();
-      
+
       // Функция для обработки одного листа с неблокирующей задержкой
       const processSheetAsync = (sheet, index) => {
         return new Promise((resolve) => {
@@ -115,98 +115,92 @@ async function asXlsx({
           });
         });
       };
-      
+
       // Функция для паузы между батчами
       const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+      // Обрабатываем листы последовательно и создаем документы сразу после обработки каждого листа
+      // Это позволяет задавать вопросы по уже обработанным листам, пока остальные еще обрабатываются
+      console.log(`[XLSX] [${timestamp}] Processing sheets sequentially - creating documents immediately after each sheet...`);
       
-      // Обрабатываем листы батчами
-      const processedSheets = [];
-      for (let i = 0; i < workSheetsFromFile.length; i += BATCH_SIZE) {
-        const batch = workSheetsFromFile.slice(i, i + BATCH_SIZE);
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(workSheetsFromFile.length / BATCH_SIZE);
+      let totalWordCount = 0;
+      let processedCount = 0;
+      
+      for (let i = 0; i < workSheetsFromFile.length; i++) {
+        const sheet = workSheetsFromFile[i];
+        const sheetStartTime = Date.now();
         
-        console.log(`[XLSX] [${timestamp}] Processing batch ${batchNumber}/${totalBatches} (sheets ${i + 1}-${Math.min(i + BATCH_SIZE, workSheetsFromFile.length)})...`);
-        const batchStartTime = Date.now();
-        
-        // Обрабатываем батч параллельно
-        const batchResults = await Promise.all(
-          batch.map((sheet, batchIndex) => processSheetAsync(sheet, i + batchIndex))
-        );
-        
-        processedSheets.push(...batchResults);
-        
-        const batchDuration = ((Date.now() - batchStartTime) / 1000).toFixed(2);
-        console.log(`[XLSX] [${timestamp}] Batch ${batchNumber}/${totalBatches} completed in ${batchDuration}s`);
-        
-        // Делаем паузу между батчами, чтобы дать event loop обработать другие запросы
-        if (i + BATCH_SIZE < workSheetsFromFile.length) {
-          await delay(BATCH_DELAY_MS);
+        try {
+          console.log(`[XLSX] [${timestamp}] Processing sheet ${i + 1}/${workSheetsFromFile.length}: "${sheet.name}"...`);
+          const processed = processSheet(sheet);
+          
+          if (!processed) {
+            console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" is empty, skipped`);
+            continue;
+          }
+          
+          const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+          console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" processed in ${sheetDuration}s - ${processed.wordCount} words`);
+          
+          // Создаем отдельный документ для каждого листа сразу после обработки
+          const sheetData = {
+            id: v4(),
+            url: `file://${fullFilePath}`,
+            title: metadata.title || `${filename} - Sheet: ${processed.name}`,
+            docAuthor: metadata.docAuthor || "Unknown",
+            description:
+              metadata.description || `Sheet "${processed.name}" from ${filename}`,
+            docSource: metadata.docSource || "an xlsx file uploaded by the user.",
+            chunkSource: metadata.chunkSource || processed.name,
+            published: createdDate(fullFilePath),
+            wordCount: processed.wordCount,
+            pageContent: `Sheet: ${processed.name}\n${processed.content}`,
+            token_count_estimate: tokenizeString(processed.content),
+          };
+
+          const writeStartTime = Date.now();
+          const document = writeToServerDocuments({
+            data: sheetData,
+            filename: `${slugify(path.basename(filename))}-${slugify(processed.name)}-${sheetData.id}`,
+            destinationOverride: null,
+            options: { parseOnly: true },
+          });
+          const writeDuration = ((Date.now() - writeStartTime) / 1000).toFixed(2);
+          
+          documents.push(document);
+          totalWordCount += processed.wordCount;
+          processedCount++;
+          
+          console.log(`[XLSX] [${timestamp}] Document for sheet "${processed.name}" created in ${writeDuration}s (${processedCount}/${workSheetsFromFile.length} ready)`);
+          console.log(`[XLSX] [${timestamp}] ✓ Sheet "${processed.name}" is now available for queries!`);
+          
+          // Небольшая пауза после каждого листа, чтобы дать event loop обработать другие запросы
+          if (i < workSheetsFromFile.length - 1) {
+            await delay(BATCH_DELAY_MS);
+          }
+        } catch (error) {
+          const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+          console.error(`[XLSX] [${timestamp}] ERROR processing sheet "${sheet.name}" after ${sheetDuration}s:`, error);
+          console.error(`[XLSX] [${timestamp}] Error stack:`, error.stack);
+          // Продолжаем обработку остальных листов даже при ошибке
         }
       }
-      
+
       const processDuration = ((Date.now() - processStartTime) / 1000).toFixed(2);
       console.log(`[XLSX] [${timestamp}] All sheets processed in ${processDuration}s`);
-
-      // Фильтруем пустые листы
-      const validSheets = processedSheets.filter((sheet) => sheet !== null);
-
-      if (validSheets.length === 0) {
-        console.log(`No valid sheets found in ${filename}.`);
+      
+      if (documents.length === 0) {
+        console.log(`[XLSX] [${timestamp}] No valid sheets found in ${filename}.`);
         return {
           success: false,
           reason: `No valid sheets found in ${filename}.`,
           documents: [],
         };
       }
-
-      // Собираем содержимое всех листов
-      const allSheetContents = validSheets.map(
-        (sheet) => `\nSheet: ${sheet.name}\n${sheet.content}`
-      );
-      const sheetNames = validSheets.map((sheet) => sheet.name);
-      const totalWordCount = validSheets.reduce(
-        (sum, sheet) => sum + sheet.wordCount,
-        0
-      );
-
-      const combinedContent = allSheetContents.join("\n");
-      const sheetListText =
-        sheetNames.length > 1
-          ? ` (Sheets: ${sheetNames.join(", ")})`
-          : ` (Sheet: ${sheetNames[0]})`;
-
-      const combinedData = {
-        id: v4(),
-        url: `file://${fullFilePath}`,
-        title: metadata.title || `${filename}${sheetListText}`,
-        docAuthor: metadata.docAuthor || "Unknown",
-        description:
-          metadata.description ||
-          `Spreadsheet data from ${filename} containing ${sheetNames.length} ${
-            sheetNames.length === 1 ? "sheet" : "sheets"
-          }`,
-        docSource: metadata.docSource || "an xlsx file uploaded by the user.",
-        chunkSource: metadata.chunkSource || "",
-        published: createdDate(fullFilePath),
-        wordCount: totalWordCount,
-        pageContent: combinedContent,
-        token_count_estimate: tokenizeString(combinedContent),
-      };
-
-      const writeStartTime = Date.now();
-      const document = writeToServerDocuments({
-        data: combinedData,
-        filename: `${slugify(path.basename(filename))}-${combinedData.id}`,
-        destinationOverride: null,
-        options: { parseOnly: true },
-      });
-      const writeDuration = ((Date.now() - writeStartTime) / 1000).toFixed(2);
-      documents.push(document);
+      
       const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`[XLSX] [${timestamp}] Document written in ${writeDuration}s`);
-      console.log(`[XLSX] [${timestamp}] [SUCCESS]: ${filename} converted & ready for embedding in ${totalDuration}s total`);
-      console.log(`[XLSX] [${timestamp}] Total word count: ${totalWordCount}, Token estimate: ${combinedData.token_count_estimate}`);
+      console.log(`[XLSX] [${timestamp}] [SUCCESS]: ${filename} converted - ${documents.length} document(s) created in ${totalDuration}s total`);
+      console.log(`[XLSX] [${timestamp}] Total word count: ${totalWordCount}, Documents ready: ${documents.length}/${workSheetsFromFile.length}`);
     } else {
       const folderName = slugify(
         `${path.basename(filename)}-${v4().slice(0, 4)}`,
@@ -327,12 +321,12 @@ function processSheet(sheet) {
   try {
     const { name, data } = sheet;
     const rowCount = data ? data.length : 0;
-    
+
     // Для очень больших листов (>10000 строк) предупреждаем о возможной задержке
     if (rowCount > 10000) {
       console.log(`[XLSX] WARNING: Sheet "${name}" has ${rowCount} rows - processing may take longer`);
     }
-    
+
     const content = convertToCSV(data);
 
     if (!content?.length) {
@@ -341,12 +335,12 @@ function processSheet(sheet) {
     }
 
     console.log(`-- Processing sheet: ${name} --`);
-    
+
     // Для больших листов считаем слова более эффективно
-    const wordCount = rowCount > 5000 
+    const wordCount = rowCount > 5000
       ? content.split(/\s+/).filter(word => word.length > 0).length
       : content.split(/\s+/).length;
-    
+
     return {
       name,
       content,
