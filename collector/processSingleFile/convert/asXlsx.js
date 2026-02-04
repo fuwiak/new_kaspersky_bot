@@ -87,33 +87,33 @@ async function asXlsx({
       // Это позволяет задавать вопросы по уже обработанным листам, пока остальные еще обрабатываются
       const SHEET_DELAY_MS = 50; // Пауза между листами в миллисекундах для неблокирующей обработки
       const processStartTime = Date.now();
-      
+
       // Функция для паузы между листами
       const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
       // Обрабатываем листы последовательно и создаем документы сразу после обработки каждого листа
       // Это позволяет задавать вопросы по уже обработанным листам, пока остальные еще обрабатываются
       console.log(`[XLSX] [${timestamp}] Processing sheets sequentially - creating documents immediately after each sheet...`);
-      
+
       let totalWordCount = 0;
       let processedCount = 0;
-      
+
       for (let i = 0; i < workSheetsFromFile.length; i++) {
         const sheet = workSheetsFromFile[i];
         const sheetStartTime = Date.now();
-        
+
         try {
           console.log(`[XLSX] [${timestamp}] Processing sheet ${i + 1}/${workSheetsFromFile.length}: "${sheet.name}"...`);
           const processed = processSheet(sheet);
-          
+
           if (!processed) {
             console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" is empty, skipped`);
             continue;
           }
-          
+
           const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
           console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" processed in ${sheetDuration}s - ${processed.wordCount} words`);
-          
+
           // Создаем отдельный документ для каждого листа сразу после обработки
           const sheetData = {
             id: v4(),
@@ -138,17 +138,17 @@ async function asXlsx({
             options: { parseOnly: true },
           });
           const writeDuration = ((Date.now() - writeStartTime) / 1000).toFixed(2);
-          
+
           documents.push(document);
           totalWordCount += processed.wordCount;
           processedCount++;
-          
+
           console.log(`[XLSX] [${timestamp}] Document for sheet "${processed.name}" created in ${writeDuration}s (${processedCount}/${workSheetsFromFile.length} ready)`);
           console.log(`[XLSX] [${timestamp}] ✓ Sheet "${processed.name}" is now available for queries!`);
-          
+
           // Небольшая пауза после каждого листа, чтобы дать event loop обработать другие запросы
           if (i < workSheetsFromFile.length - 1) {
-            await delay(BATCH_DELAY_MS);
+            await delay(SHEET_DELAY_MS);
           }
         } catch (error) {
           const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
@@ -160,7 +160,7 @@ async function asXlsx({
 
       const processDuration = ((Date.now() - processStartTime) / 1000).toFixed(2);
       console.log(`[XLSX] [${timestamp}] All sheets processed in ${processDuration}s`);
-      
+
       if (documents.length === 0) {
         console.log(`[XLSX] [${timestamp}] No valid sheets found in ${filename}.`);
         return {
@@ -169,7 +169,7 @@ async function asXlsx({
           documents: [],
         };
       }
-      
+
       const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`[XLSX] [${timestamp}] [SUCCESS]: ${filename} converted - ${documents.length} document(s) created in ${totalDuration}s total`);
       console.log(`[XLSX] [${timestamp}] Total word count: ${totalWordCount}, Documents ready: ${documents.length}/${workSheetsFromFile.length}`);
