@@ -36,8 +36,9 @@ function FileUploadProgressComponent({
 
   useEffect(() => {
     async function uploadFile() {
-      setLoading(true);
-      setLoadingMessage("Uploading file...");
+      // Не блокируем весь UI - компонент уже показывает свой индикатор загрузки
+      // setLoading(true);
+      // setLoadingMessage("Uploading file...");
       const start = Number(new Date());
       const formData = new FormData();
       formData.append("file", file, file.name);
@@ -53,8 +54,9 @@ function FileUploadProgressComponent({
         onUploadError(data.error);
         setError(data.error);
       } else {
-        setLoading(false);
-        setLoadingMessage("");
+        // Не нужно сбрасывать глобальное состояние загрузки
+        // setLoading(false);
+        // setLoadingMessage("");
         setStatus("complete");
         clearInterval(timer);
         onUploadSuccess();
