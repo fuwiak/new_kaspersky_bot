@@ -255,16 +255,17 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
     };
   }, []);
 
-  // Reset chat function
+  // Reset chat function - только очистка сообщений и файлов, без закрытия websocket
   const resetChat = () => {
     setChatHistory([]);
     setMessageEmit("");
     setLoadingResponse(false);
-    if (websocket) {
-      websocket.close();
-      setWebsocket(null);
-    }
-    setSocketId(null);
+    // НЕ закрываем websocket и НЕ сбрасываем socketId, чтобы чат продолжал работать
+    // if (websocket) {
+    //   websocket.close();
+    //   setWebsocket(null);
+    // }
+    // setSocketId(null);
     window.dispatchEvent(new CustomEvent(CLEAR_ATTACHMENTS_EVENT));
   };
 
@@ -347,15 +348,6 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
       className="transition-all duration-500 relative md:ml-[2px] md:mr-[16px] md:my-[16px] md:rounded-[16px] bg-theme-bg-secondary w-full h-full overflow-y-scroll no-scroll z-[2]"
     >
       {isMobile && <SidebarMobileHeader />}
-      {chatHistory.length > 0 && (
-        <button
-          onClick={resetChat}
-          className="fixed top-4 right-4 md:top-6 md:right-6 z-50 px-4 py-2 bg-theme-sidebar-item-default hover:bg-theme-sidebar-item-hover text-theme-text-primary border border-theme-sidebar-border rounded-lg text-sm font-medium transition-all duration-200 shadow-lg"
-          title="Очистить чат и начать заново"
-        >
-          Reset
-        </button>
-      )}
       <DnDFileUploaderWrapper>
         <MetricsProvider>
           <ChatHistory
@@ -375,6 +367,15 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
           sendCommand={sendCommand}
           attachments={files}
         />
+        {chatHistory.length > 0 && (
+          <button
+            onClick={resetChat}
+            className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 px-4 py-2 bg-theme-sidebar-item-default hover:bg-theme-sidebar-item-hover text-theme-text-primary border border-theme-sidebar-border rounded-lg text-sm font-medium transition-all duration-200 shadow-lg"
+            title="Очистить сообщения и файлы"
+          >
+            Reset
+          </button>
+        )}
       </DnDFileUploaderWrapper>
       <ChatTooltips />
     </div>
