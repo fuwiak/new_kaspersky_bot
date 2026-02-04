@@ -19,7 +19,7 @@ const { default: slugify } = require("slugify");
  */
 function convertToCSV(data) {
   if (!data || data.length === 0) return "";
-  
+
   // Используем более эффективный подход для больших массивов
   const rows = [];
   for (let i = 0; i < data.length; i++) {
@@ -28,7 +28,7 @@ function convertToCSV(data) {
       rows.push("");
       continue;
     }
-    
+
     const cells = [];
     for (let j = 0; j < row.length; j++) {
       const cell = row[j];
@@ -43,7 +43,7 @@ function convertToCSV(data) {
     }
     rows.push(cells.join(","));
   }
-  
+
   return rows.join("\n");
 }
 
@@ -65,7 +65,7 @@ async function asXlsx({
     console.log(`[XLSX] [${timestamp}] File size: ${stats.size} bytes (${fileSizeMB} MB)`);
     console.log(`[XLSX] [${timestamp}] Full path: ${fullFilePath}`);
     console.log(`[XLSX] [${timestamp}] Options: parseOnly=${options.parseOnly || false}`);
-    
+
     // Парсим файл один раз - это может быть медленно для больших файлов,
     // но node-xlsx не поддерживает streaming, поэтому это необходимо
     console.log(`[XLSX] [${timestamp}] Parsing Excel file...`);
@@ -74,7 +74,7 @@ async function asXlsx({
     const parseDuration = ((Date.now() - parseStartTime) / 1000).toFixed(2);
     console.log(`[XLSX] [${timestamp}] Excel file parsed in ${parseDuration}s`);
     console.log(`[XLSX] [${timestamp}] Found ${workSheetsFromFile.length} sheet(s) in ${filename}`);
-    
+
     // Логируем информацию о каждом листе
     workSheetsFromFile.forEach((sheet, index) => {
       const rowCount = sheet.data ? sheet.data.length : 0;
