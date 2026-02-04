@@ -83,40 +83,12 @@ async function asXlsx({
     });
 
     if (options.parseOnly) {
-      // Для больших файлов обрабатываем листы батчами с паузами, чтобы не блокировать приложение
-      // Определяем размер батча в зависимости от количества листов
-      const BATCH_SIZE = workSheetsFromFile.length > 20 ? 3 : workSheetsFromFile.length > 10 ? 5 : 10;
-      const BATCH_DELAY_MS = 50; // Пауза между батчами в миллисекундах
-
-      console.log(`[XLSX] [${timestamp}] Processing ${workSheetsFromFile.length} sheet(s) in batches of ${BATCH_SIZE}...`);
+      // Обрабатываем листы последовательно и создаем документы сразу после обработки каждого листа
+      // Это позволяет задавать вопросы по уже обработанным листам, пока остальные еще обрабатываются
+      const SHEET_DELAY_MS = 50; // Пауза между листами в миллисекундах для неблокирующей обработки
       const processStartTime = Date.now();
-
-      // Функция для обработки одного листа с неблокирующей задержкой
-      const processSheetAsync = (sheet, index) => {
-        return new Promise((resolve) => {
-          setImmediate(() => {
-            const sheetStartTime = Date.now();
-            try {
-              console.log(`[XLSX] [${timestamp}] Processing sheet ${index + 1}/${workSheetsFromFile.length}: "${sheet.name}"...`);
-        const processed = processSheet(sheet);
-              const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
-              if (processed) {
-                console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" processed in ${sheetDuration}s - ${processed.wordCount} words`);
-              } else {
-                console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" is empty, skipped`);
-              }
-              resolve(processed);
-            } catch (error) {
-              const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
-              console.error(`[XLSX] [${timestamp}] ERROR processing sheet "${sheet.name}" after ${sheetDuration}s:`, error);
-              console.error(`[XLSX] [${timestamp}] Error stack:`, error.stack);
-              resolve(null);
-            }
-          });
-        });
-      };
-
-      // Функция для паузы между батчами
+      
+      // Функция для паузы между листами
       const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
       // Обрабатываем листы последовательно и создаем документы сразу после обработки каждого листа
