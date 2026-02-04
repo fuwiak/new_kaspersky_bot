@@ -27,6 +27,7 @@ export const PARSED_FILE_ATTACHMENT_REMOVED_EVENT =
  * @property {string|null} error - Error message
  * @property {{id:string, location:string}|null} document - uploaded document details
  * @property {('attachment'|'upload')} type - The type of upload. Attachments are chat-specific, uploads go to the workspace.
+ * @property {number|null} startTime - Timestamp when upload started (for timer display)
  */
 
 /**
@@ -166,6 +167,7 @@ export function DnDFileUploaderProvider({
           status: "in_progress",
           error: null,
           type: "upload",
+          startTime: Date.now(),
         });
       }
     }
@@ -228,6 +230,7 @@ export function DnDFileUploaderProvider({
           status: "in_progress",
           error: null,
           type: "upload",
+          startTime: Date.now(),
         });
       }
     }

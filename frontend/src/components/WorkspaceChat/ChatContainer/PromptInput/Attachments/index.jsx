@@ -10,6 +10,7 @@ import {
   WarningOctagon,
   X,
 } from "@phosphor-icons/react";
+import { useState, useEffect } from "react";
 import { REMOVE_ATTACHMENT_EVENT } from "../../DnDWrapper";
 
 /**
@@ -42,27 +43,7 @@ function AttachmentItem({ attachment }) {
   }
 
   if (status === "in_progress") {
-    return (
-      <div className="relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group">
-        <div
-          className={`bg-theme-attachment-icon-spinner-bg rounded-md flex items-center justify-center flex-shrink-0 h-[32px] w-[32px] m-1`}
-        >
-          <CircleNotch
-            size={18}
-            weight="bold"
-            className="text-theme-attachment-icon-spinner animate-spin"
-          />
-        </div>
-        <div className="flex flex-col w-[125px]">
-          <p className="text-theme-attachment-text text-xs font-semibold truncate">
-            {file.name}
-          </p>
-          <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
-            Uploading...
-          </p>
-        </div>
-      </div>
-    );
+    return <UploadingAttachmentItem attachment={attachment} />;
   }
 
   if (status === "failed") {
@@ -186,6 +167,77 @@ function AttachmentItem({ attachment }) {
         <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
           {status === "embedded" ? "File embedded!" : "Added as context!"}
         </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Component for displaying uploading file with timer
+ * @param {{attachment: import("../../DnDWrapper").Attachment}}
+ */
+function UploadingAttachmentItem({ attachment }) {
+  const { uid, file, startTime, document } = attachment;
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!startTime) return;
+
+    // Calculate initial elapsed time
+    const updateElapsed = () => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setElapsedSeconds(elapsed);
+    };
+
+    // Update immediately
+    updateElapsed();
+
+    // Update every second
+    const interval = setInterval(updateElapsed, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  function removeFileFromQueue() {
+    window.dispatchEvent(
+      new CustomEvent(REMOVE_ATTACHMENT_EVENT, { detail: { uid, document } })
+    );
+  }
+
+  const { iconBgColor } = displayFromFile(file);
+
+  return (
+    <div className="relative flex items-center gap-x-1 rounded-lg bg-theme-attachment-bg border-none w-[180px] group">
+      <div className="invisible group-hover:visible absolute -top-[5px] -right-[5px] w-fit h-fit z-[10]">
+        <button
+          onClick={removeFileFromQueue}
+          type="button"
+          className="bg-white hover:bg-error hover:text-theme-attachment-text rounded-full p-1 flex items-center justify-center hover:border-transparent border border-theme-attachment-bg"
+        >
+          <X size={10} className="flex-shrink-0" />
+        </button>
+      </div>
+      <div
+        className={`bg-theme-attachment-icon-spinner-bg rounded-md flex items-center justify-center flex-shrink-0 h-[32px] w-[32px] m-1`}
+      >
+        <CircleNotch
+          size={18}
+          weight="bold"
+          className="text-theme-attachment-icon-spinner animate-spin"
+        />
+      </div>
+      <div className="flex flex-col w-[125px]">
+        <p className="text-theme-attachment-text text-xs font-semibold truncate">
+          {file.name}
+        </p>
+        <div className="flex items-center gap-x-1">
+          <p className="text-theme-attachment-text-secondary text-[10px] leading-[14px] font-medium">
+            Загрузка...
+          </p>
+          <span className="text-theme-button-primary text-[10px] leading-[14px] font-bold tabular-nums">
+            {elapsedSeconds}с
+          </span>
+        </div>
       </div>
     </div>
   );

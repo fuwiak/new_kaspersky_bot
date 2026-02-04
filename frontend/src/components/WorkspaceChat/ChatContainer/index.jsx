@@ -350,7 +350,7 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
       {chatHistory.length > 0 && (
         <button
           onClick={resetChat}
-          className="fixed top-4 right-4 md:top-6 md:right-6 z-50 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg"
+          className="fixed top-4 right-4 md:top-6 md:right-6 z-50 px-4 py-2 bg-theme-sidebar-item-default hover:bg-theme-sidebar-item-hover text-theme-text-primary border border-theme-sidebar-border rounded-lg text-sm font-medium transition-all duration-200 shadow-lg"
           title="Очистить чат и начать заново"
         >
           Reset
