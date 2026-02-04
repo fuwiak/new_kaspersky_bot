@@ -266,6 +266,7 @@ export function DnDFileUploaderProvider({
   async function embedEligibleAttachments(newAttachments = []) {
     window.dispatchEvent(new CustomEvent(ATTACHMENTS_PROCESSING_EVENT));
     const promises = [];
+    const FILE_UPLOAD_TIMEOUT = 20000; // 20 seconds
 
     const { currentContextTokenCount, contextWindow } =
       await Workspace.getParsedFiles(workspace.slug, threadSlug);
@@ -284,9 +285,22 @@ export function DnDFileUploaderProvider({
       const formData = new FormData();
       formData.append("file", attachment.file, attachment.file.name);
       formData.append("threadSlug", threadSlug || null);
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("TIMEOUT"));
+        }, FILE_UPLOAD_TIMEOUT);
+      });
+
+      // Race between the upload and timeout
       promises.push(
-        Workspace.parseFile(workspace.slug, formData).then(
-          async ({ response, data }) => {
+        Promise.race([
+          Workspace.parseFile(workspace.slug, formData),
+          timeoutPromise,
+        ])
+          .then(async (result) => {
+            const { response, data } = result;
             if (!response.ok) {
               const updates = {
                 status: "failed",
@@ -326,11 +340,11 @@ export function DnDFileUploaderProvider({
             }
 
             // File is within limits, keep in parsed files
-            const result = { success: true, document: file };
+            const result_success = { success: true, document: file };
             const updates = {
-              status: result.success ? "added_context" : "failed",
-              error: result.error ?? null,
-              document: result.document,
+              status: result_success.success ? "added_context" : "failed",
+              error: result_success.error ?? null,
+              document: result_success.document,
             };
 
             setFiles((prev) =>
@@ -344,8 +358,56 @@ export function DnDFileUploaderProvider({
                     : { ...prevFile, ...updates }
               )
             );
-          }
-        )
+
+            // Show success toast
+            showToast(`Файл "${attachment.file.name}" успешно загружен`, "success");
+          })
+          .catch((error) => {
+            // Handle timeout or other errors
+            if (error.message === "TIMEOUT") {
+              const timeoutError = "Загрузка файла превысила 20 секунд и была прервана";
+              const updates = {
+                status: "failed",
+                error: timeoutError,
+              };
+              setFiles((prev) =>
+                prev.map(
+                  (
+                    /** @type {Attachment} */
+                    prevFile
+                  ) =>
+                    prevFile.uid !== attachment.uid
+                      ? prevFile
+                      : { ...prevFile, ...updates }
+                )
+              );
+              // Add timeout message to chat
+              window.dispatchEvent(
+                new CustomEvent("ADD_CHAT_MESSAGE", {
+                  detail: {
+                    message: `⚠️ Загрузка файла "${attachment.file.name}" превысила 20 секунд и была прервана.`,
+                    role: "assistant",
+                  },
+                })
+              );
+            } else {
+              const updates = {
+                status: "failed",
+                error: error.message || "Ошибка при загрузке файла",
+              };
+              setFiles((prev) =>
+                prev.map(
+                  (
+                    /** @type {Attachment} */
+                    prevFile
+                  ) =>
+                    prevFile.uid !== attachment.uid
+                      ? prevFile
+                      : { ...prevFile, ...updates }
+                )
+              );
+            }
+          })
       );
     }
 

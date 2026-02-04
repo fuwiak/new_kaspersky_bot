@@ -228,6 +228,46 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
     loadingResponse === true && fetchReply();
   }, [loadingResponse, chatHistory, workspace]);
 
+  // Handle timeout messages from file uploads
+  useEffect(() => {
+    function handleAddChatMessage(event) {
+      const { message, role = "assistant" } = event.detail || {};
+      if (!message) return;
+
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          uuid: v4(),
+          content: message,
+          role,
+          sources: [],
+          closed: true,
+          error: null,
+          animate: false,
+          pending: false,
+        },
+      ]);
+    }
+
+    window.addEventListener("ADD_CHAT_MESSAGE", handleAddChatMessage);
+    return () => {
+      window.removeEventListener("ADD_CHAT_MESSAGE", handleAddChatMessage);
+    };
+  }, []);
+
+  // Reset chat function
+  const resetChat = () => {
+    setChatHistory([]);
+    setMessageEmit("");
+    setLoadingResponse(false);
+    if (websocket) {
+      websocket.close();
+      setWebsocket(null);
+    }
+    setSocketId(null);
+    window.dispatchEvent(new CustomEvent(CLEAR_ATTACHMENTS_EVENT));
+  };
+
   // TODO: Simplify this WSS stuff
   useEffect(() => {
     function handleWSS() {
@@ -307,6 +347,15 @@ export default function ChatContainer({ workspace, knownHistory = [] }) {
       className="transition-all duration-500 relative md:ml-[2px] md:mr-[16px] md:my-[16px] md:rounded-[16px] bg-theme-bg-secondary w-full h-full overflow-y-scroll no-scroll z-[2]"
     >
       {isMobile && <SidebarMobileHeader />}
+      {chatHistory.length > 0 && (
+        <button
+          onClick={resetChat}
+          className="fixed top-4 right-4 md:top-6 md:right-6 z-50 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg"
+          title="Очистить чат и начать заново"
+        >
+          Reset
+        </button>
+      )}
       <DnDFileUploaderWrapper>
         <MetricsProvider>
           <ChatHistory
