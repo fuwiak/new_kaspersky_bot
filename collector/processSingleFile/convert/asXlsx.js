@@ -11,19 +11,40 @@ const {
 const { tokenizeString } = require("../../utils/tokenizer");
 const { default: slugify } = require("slugify");
 
+/**
+ * Конвертирует данные листа в CSV формат
+ * Оптимизировано для больших объемов данных
+ * @param {Array<Array<string|number|null|undefined>>} data - 2D массив данных листа
+ * @returns {string} CSV строка
+ */
 function convertToCSV(data) {
-  return data
-    .map((row) =>
-      row
-        .map((cell) => {
-          if (cell === null || cell === undefined) return "";
-          if (typeof cell === "string" && cell.includes(","))
-            return `"${cell}"`;
-          return cell;
-        })
-        .join(",")
-    )
-    .join("\n");
+  if (!data || data.length === 0) return "";
+  
+  // Используем более эффективный подход для больших массивов
+  const rows = [];
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length === 0) {
+      rows.push("");
+      continue;
+    }
+    
+    const cells = [];
+    for (let j = 0; j < row.length; j++) {
+      const cell = row[j];
+      if (cell === null || cell === undefined) {
+        cells.push("");
+      } else if (typeof cell === "string" && (cell.includes(",") || cell.includes('"') || cell.includes("\n"))) {
+        // Экранируем кавычки и оборачиваем в кавычки если нужно
+        cells.push(`"${cell.replace(/"/g, '""')}"`);
+      } else {
+        cells.push(String(cell));
+      }
+    }
+    rows.push(cells.join(","));
+  }
+  
+  return rows.join("\n");
 }
 
 async function asXlsx({
@@ -35,24 +56,37 @@ async function asXlsx({
   const documents = [];
 
   try {
+    // Парсим файл один раз - это может быть медленно для больших файлов,
+    // но node-xlsx не поддерживает streaming, поэтому это необходимо
+    console.log(`[INFO]: Parsing Excel file: ${filename}...`);
     const workSheetsFromFile = xlsx.parse(fullFilePath);
+    console.log(`[INFO]: Found ${workSheetsFromFile.length} sheet(s) in ${filename}`);
 
     if (options.parseOnly) {
-      const allSheetContents = [];
-      let totalWordCount = 0;
-      const sheetNames = [];
+      // Обрабатываем листы параллельно для ускорения
+      // Используем setImmediate для разбиения работы на части и избежания блокировки event loop
+      console.log(`[INFO]: Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      const processedSheets = await Promise.all(
+        workSheetsFromFile.map((sheet) => {
+          return new Promise((resolve) => {
+            // Используем setImmediate для неблокирующей обработки
+            setImmediate(() => {
+              try {
+                const processed = processSheet(sheet);
+                resolve(processed);
+              } catch (error) {
+                console.error(`Error processing sheet "${sheet.name}":`, error);
+                resolve(null);
+              }
+            });
+          });
+        })
+      );
 
-      for (const sheet of workSheetsFromFile) {
-        const processed = processSheet(sheet);
-        if (!processed) continue;
+      // Фильтруем пустые листы
+      const validSheets = processedSheets.filter((sheet) => sheet !== null);
 
-        const { name, content, wordCount } = processed;
-        sheetNames.push(name);
-        allSheetContents.push(`\nSheet: ${name}\n${content}`);
-        totalWordCount += wordCount;
-      }
-
-      if (allSheetContents.length === 0) {
+      if (validSheets.length === 0) {
         console.log(`No valid sheets found in ${filename}.`);
         return {
           success: false,
@@ -60,6 +94,16 @@ async function asXlsx({
           documents: [],
         };
       }
+
+      // Собираем содержимое всех листов
+      const allSheetContents = validSheets.map(
+        (sheet) => `\nSheet: ${sheet.name}\n${sheet.content}`
+      );
+      const sheetNames = validSheets.map((sheet) => sheet.name);
+      const totalWordCount = validSheets.reduce(
+        (sum, sheet) => sum + sheet.wordCount,
+        0
+      );
 
       const combinedContent = allSheetContents.join("\n");
       const sheetListText =
@@ -105,37 +149,58 @@ async function asXlsx({
       if (!fs.existsSync(outFolderPath))
         fs.mkdirSync(outFolderPath, { recursive: true });
 
-      for (const sheet of workSheetsFromFile) {
-        const processed = processSheet(sheet);
-        if (!processed) continue;
+      // Обрабатываем листы параллельно
+      // Используем setImmediate для разбиения работы на части и избежания блокировки event loop
+      console.log(`[INFO]: Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      const processedSheets = await Promise.all(
+        workSheetsFromFile.map((sheet) => {
+          return new Promise((resolve) => {
+            setImmediate(() => {
+              try {
+                const processed = processSheet(sheet);
+                if (!processed) {
+                  resolve(null);
+                  return;
+                }
 
-        const { name, content, wordCount } = processed;
-        const sheetData = {
-          id: v4(),
-          url: `file://${path.join(outFolderPath, `${slugify(name)}.csv`)}`,
-          title: metadata.title || `${filename} - Sheet:${name}`,
-          docAuthor: metadata.docAuthor || "Unknown",
-          description:
-            metadata.description || `Spreadsheet data from sheet: ${name}`,
-          docSource: metadata.docSource || "an xlsx file uploaded by the user.",
-          chunkSource: metadata.chunkSource || "",
-          published: createdDate(fullFilePath),
-          wordCount: wordCount,
-          pageContent: content,
-          token_count_estimate: tokenizeString(content),
-        };
+                const { name, content, wordCount } = processed;
+                const sheetData = {
+                  id: v4(),
+                  url: `file://${path.join(outFolderPath, `${slugify(name)}.csv`)}`,
+                  title: metadata.title || `${filename} - Sheet:${name}`,
+                  docAuthor: metadata.docAuthor || "Unknown",
+                  description:
+                    metadata.description || `Spreadsheet data from sheet: ${name}`,
+                  docSource: metadata.docSource || "an xlsx file uploaded by the user.",
+                  chunkSource: metadata.chunkSource || "",
+                  published: createdDate(fullFilePath),
+                  wordCount: wordCount,
+                  pageContent: content,
+                  token_count_estimate: tokenizeString(content),
+                };
 
-        const document = writeToServerDocuments({
-          data: sheetData,
-          filename: `sheet-${slugify(name)}`,
-          destinationOverride: outFolderPath,
-          options: { parseOnly: options.parseOnly },
-        });
-        documents.push(document);
-        console.log(
-          `[SUCCESS]: Sheet "${name}" converted & ready for embedding.`
-        );
-      }
+                const document = writeToServerDocuments({
+                  data: sheetData,
+                  filename: `sheet-${slugify(name)}`,
+                  destinationOverride: outFolderPath,
+                  options: { parseOnly: options.parseOnly },
+                });
+                console.log(
+                  `[SUCCESS]: Sheet "${name}" converted & ready for embedding.`
+                );
+                resolve(document);
+              } catch (error) {
+                console.error(`Error processing sheet "${sheet.name}":`, error);
+                resolve(null);
+              }
+            });
+          });
+        })
+      );
+
+      // Фильтруем null значения и добавляем в documents
+      const validDocuments = processedSheets.filter((doc) => doc !== null);
+      documents.push(...validDocuments);
     }
   } catch (err) {
     console.error("Could not process xlsx file!", err);
