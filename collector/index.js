@@ -44,25 +44,45 @@ app.post(
   "/process",
   [verifyPayloadIntegrity],
   async function (request, response) {
+    const timestamp = new Date().toISOString();
     const { filename, options = {}, metadata = {} } = reqBody(request);
+    console.log(`[PROCESS_ENDPOINT] [${timestamp}] Received process request for: ${filename}`);
+    console.log(`[PROCESS_ENDPOINT] [${timestamp}] Options:`, JSON.stringify(options));
+    console.log(`[PROCESS_ENDPOINT] [${timestamp}] Metadata:`, JSON.stringify(metadata));
+    
     try {
       const targetFilename = path
         .normalize(filename)
         .replace(/^(\.\.(\/|\\|$))+/, "");
+      console.log(`[PROCESS_ENDPOINT] [${timestamp}] Normalized filename: ${targetFilename}`);
+      
+      const processStartTime = Date.now();
       const {
         success,
         reason,
         documents = [],
       } = await processSingleFile(targetFilename, options, metadata);
+      const processDuration = ((Date.now() - processStartTime) / 1000).toFixed(2);
+      
+      console.log(`[PROCESS_ENDPOINT] [${timestamp}] Processing completed in ${processDuration}s`);
+      console.log(`[PROCESS_ENDPOINT] [${timestamp}] Result: success=${success}, documents=${documents.length}`);
+      
+      if (!success) {
+        console.error(`[PROCESS_ENDPOINT] [${timestamp}] ERROR: ${reason}`);
+      }
+      
       response
         .status(200)
         .json({ filename: targetFilename, success, reason, documents });
     } catch (e) {
-      console.error(e);
+      const errorDuration = ((Date.now() - Date.parse(timestamp)) / 1000).toFixed(2);
+      console.error(`[PROCESS_ENDPOINT] [${timestamp}] EXCEPTION after ${errorDuration}s:`, e);
+      console.error(`[PROCESS_ENDPOINT] [${timestamp}] Error message:`, e.message);
+      console.error(`[PROCESS_ENDPOINT] [${timestamp}] Error stack:`, e.stack);
       response.status(200).json({
         filename: filename,
         success: false,
-        reason: "A processing error occurred.",
+        reason: `A processing error occurred: ${e.message}`,
         documents: [],
       });
     }
@@ -74,11 +94,18 @@ app.post(
   "/parse",
   [verifyPayloadIntegrity],
   async function (request, response) {
+    const timestamp = new Date().toISOString();
     const { filename, options = {} } = reqBody(request);
+    console.log(`[PARSE_ENDPOINT] [${timestamp}] Received parse request for: ${filename}`);
+    console.log(`[PARSE_ENDPOINT] [${timestamp}] Options:`, JSON.stringify(options));
+    
     try {
       const targetFilename = path
         .normalize(filename)
         .replace(/^(\.\.(\/|\\|$))+/, "");
+      console.log(`[PARSE_ENDPOINT] [${timestamp}] Normalized filename: ${targetFilename}`);
+      
+      const parseStartTime = Date.now();
       const {
         success,
         reason,
@@ -87,15 +114,27 @@ app.post(
         ...options,
         parseOnly: true,
       });
+      const parseDuration = ((Date.now() - parseStartTime) / 1000).toFixed(2);
+      
+      console.log(`[PARSE_ENDPOINT] [${timestamp}] Processing completed in ${parseDuration}s`);
+      console.log(`[PARSE_ENDPOINT] [${timestamp}] Result: success=${success}, documents=${documents.length}`);
+      
+      if (!success) {
+        console.error(`[PARSE_ENDPOINT] [${timestamp}] ERROR: ${reason}`);
+      }
+      
       response
         .status(200)
         .json({ filename: targetFilename, success, reason, documents });
     } catch (e) {
-      console.error(e);
+      const errorDuration = ((Date.now() - Date.parse(timestamp)) / 1000).toFixed(2);
+      console.error(`[PARSE_ENDPOINT] [${timestamp}] EXCEPTION after ${errorDuration}s:`, e);
+      console.error(`[PARSE_ENDPOINT] [${timestamp}] Error message:`, e.message);
+      console.error(`[PARSE_ENDPOINT] [${timestamp}] Error stack:`, e.stack);
       response.status(200).json({
         filename: filename,
         success: false,
-        reason: "A processing error occurred.",
+        reason: `A processing error occurred: ${e.message}`,
         documents: [],
       });
     }

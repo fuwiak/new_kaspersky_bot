@@ -53,35 +53,68 @@ async function asXlsx({
   options = {},
   metadata = {},
 }) {
+  const startTime = Date.now();
+  const timestamp = new Date().toISOString();
   const documents = [];
 
   try {
+    // Получаем размер файла
+    const stats = fs.statSync(fullFilePath);
+    const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+    console.log(`[XLSX] [${timestamp}] Starting Excel file processing: ${filename}`);
+    console.log(`[XLSX] [${timestamp}] File size: ${stats.size} bytes (${fileSizeMB} MB)`);
+    console.log(`[XLSX] [${timestamp}] Full path: ${fullFilePath}`);
+    console.log(`[XLSX] [${timestamp}] Options: parseOnly=${options.parseOnly || false}`);
+    
     // Парсим файл один раз - это может быть медленно для больших файлов,
     // но node-xlsx не поддерживает streaming, поэтому это необходимо
-    console.log(`[INFO]: Parsing Excel file: ${filename}...`);
+    console.log(`[XLSX] [${timestamp}] Parsing Excel file...`);
+    const parseStartTime = Date.now();
     const workSheetsFromFile = xlsx.parse(fullFilePath);
-    console.log(`[INFO]: Found ${workSheetsFromFile.length} sheet(s) in ${filename}`);
+    const parseDuration = ((Date.now() - parseStartTime) / 1000).toFixed(2);
+    console.log(`[XLSX] [${timestamp}] Excel file parsed in ${parseDuration}s`);
+    console.log(`[XLSX] [${timestamp}] Found ${workSheetsFromFile.length} sheet(s) in ${filename}`);
+    
+    // Логируем информацию о каждом листе
+    workSheetsFromFile.forEach((sheet, index) => {
+      const rowCount = sheet.data ? sheet.data.length : 0;
+      const colCount = sheet.data && sheet.data[0] ? sheet.data[0].length : 0;
+      console.log(`[XLSX] [${timestamp}] Sheet ${index + 1}: "${sheet.name}" - ${rowCount} rows x ${colCount} cols`);
+    });
 
     if (options.parseOnly) {
       // Обрабатываем листы параллельно для ускорения
       // Используем setImmediate для разбиения работы на части и избежания блокировки event loop
-      console.log(`[INFO]: Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      console.log(`[XLSX] [${timestamp}] Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      const processStartTime = Date.now();
       const processedSheets = await Promise.all(
-        workSheetsFromFile.map((sheet) => {
+        workSheetsFromFile.map((sheet, index) => {
           return new Promise((resolve) => {
             // Используем setImmediate для неблокирующей обработки
             setImmediate(() => {
+              const sheetStartTime = Date.now();
               try {
+                console.log(`[XLSX] [${timestamp}] Processing sheet ${index + 1}/${workSheetsFromFile.length}: "${sheet.name}"...`);
                 const processed = processSheet(sheet);
+                const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+                if (processed) {
+                  console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" processed in ${sheetDuration}s - ${processed.wordCount} words`);
+                } else {
+                  console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" is empty, skipped`);
+                }
                 resolve(processed);
               } catch (error) {
-                console.error(`Error processing sheet "${sheet.name}":`, error);
+                const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+                console.error(`[XLSX] [${timestamp}] ERROR processing sheet "${sheet.name}" after ${sheetDuration}s:`, error);
+                console.error(`[XLSX] [${timestamp}] Error stack:`, error.stack);
                 resolve(null);
               }
             });
           });
         })
       );
+      const processDuration = ((Date.now() - processStartTime) / 1000).toFixed(2);
+      console.log(`[XLSX] [${timestamp}] All sheets processed in ${processDuration}s`);
 
       // Фильтруем пустые листы
       const validSheets = processedSheets.filter((sheet) => sheet !== null);
@@ -129,14 +162,19 @@ async function asXlsx({
         token_count_estimate: tokenizeString(combinedContent),
       };
 
+      const writeStartTime = Date.now();
       const document = writeToServerDocuments({
         data: combinedData,
         filename: `${slugify(path.basename(filename))}-${combinedData.id}`,
         destinationOverride: null,
         options: { parseOnly: true },
       });
+      const writeDuration = ((Date.now() - writeStartTime) / 1000).toFixed(2);
       documents.push(document);
-      console.log(`[SUCCESS]: ${filename} converted & ready for embedding.`);
+      const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`[XLSX] [${timestamp}] Document written in ${writeDuration}s`);
+      console.log(`[XLSX] [${timestamp}] [SUCCESS]: ${filename} converted & ready for embedding in ${totalDuration}s total`);
+      console.log(`[XLSX] [${timestamp}] Total word count: ${totalWordCount}, Token estimate: ${combinedData.token_count_estimate}`);
     } else {
       const folderName = slugify(
         `${path.basename(filename)}-${v4().slice(0, 4)}`,
@@ -151,14 +189,18 @@ async function asXlsx({
 
       // Обрабатываем листы параллельно
       // Используем setImmediate для разбиения работы на части и избежания блокировки event loop
-      console.log(`[INFO]: Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      console.log(`[XLSX] [${timestamp}] Processing ${workSheetsFromFile.length} sheet(s) in parallel...`);
+      const processStartTime = Date.now();
       const processedSheets = await Promise.all(
-        workSheetsFromFile.map((sheet) => {
+        workSheetsFromFile.map((sheet, index) => {
           return new Promise((resolve) => {
             setImmediate(() => {
+              const sheetStartTime = Date.now();
               try {
+                console.log(`[XLSX] [${timestamp}] Processing sheet ${index + 1}/${workSheetsFromFile.length}: "${sheet.name}"...`);
                 const processed = processSheet(sheet);
                 if (!processed) {
+                  console.log(`[XLSX] [${timestamp}] Sheet "${sheet.name}" is empty, skipped`);
                   resolve(null);
                   return;
                 }
@@ -179,42 +221,59 @@ async function asXlsx({
                   token_count_estimate: tokenizeString(content),
                 };
 
+                const writeStartTime = Date.now();
                 const document = writeToServerDocuments({
                   data: sheetData,
                   filename: `sheet-${slugify(name)}`,
                   destinationOverride: outFolderPath,
                   options: { parseOnly: options.parseOnly },
                 });
-                console.log(
-                  `[SUCCESS]: Sheet "${name}" converted & ready for embedding.`
-                );
+                const writeDuration = ((Date.now() - writeStartTime) / 1000).toFixed(2);
+                const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+                console.log(`[XLSX] [${timestamp}] Sheet "${name}" processed in ${sheetDuration}s (write: ${writeDuration}s) - ${wordCount} words`);
+                console.log(`[XLSX] [${timestamp}] [SUCCESS]: Sheet "${name}" converted & ready for embedding.`);
                 resolve(document);
               } catch (error) {
-                console.error(`Error processing sheet "${sheet.name}":`, error);
+                const sheetDuration = ((Date.now() - sheetStartTime) / 1000).toFixed(2);
+                console.error(`[XLSX] [${timestamp}] ERROR processing sheet "${sheet.name}" after ${sheetDuration}s:`, error);
+                console.error(`[XLSX] [${timestamp}] Error stack:`, error.stack);
                 resolve(null);
               }
             });
           });
         })
       );
+      const processDuration = ((Date.now() - processStartTime) / 1000).toFixed(2);
+      console.log(`[XLSX] [${timestamp}] All sheets processed in ${processDuration}s`);
 
       // Фильтруем null значения и добавляем в documents
       const validDocuments = processedSheets.filter((doc) => doc !== null);
       documents.push(...validDocuments);
     }
   } catch (err) {
-    console.error("Could not process xlsx file!", err);
+    const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.error(`[XLSX] [${timestamp}] ERROR: Could not process xlsx file after ${totalDuration}s!`);
+    console.error(`[XLSX] [${timestamp}] Error message:`, err.message);
+    console.error(`[XLSX] [${timestamp}] Error stack:`, err.stack);
+    console.error(`[XLSX] [${timestamp}] Error name:`, err.name);
+    if (err.code) {
+      console.error(`[XLSX] [${timestamp}] Error code:`, err.code);
+    }
     return {
       success: false,
       reason: `Error processing ${filename}: ${err.message}`,
       documents: [],
     };
   } finally {
+    const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`[XLSX] [${timestamp}] Cleaning up temporary file...`);
     trashFile(fullFilePath);
+    console.log(`[XLSX] [${timestamp}] Total processing time: ${totalDuration}s`);
   }
 
   if (documents.length === 0) {
-    console.error(`No valid sheets found in ${filename}.`);
+    const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.error(`[XLSX] [${timestamp}] ERROR: No valid sheets found in ${filename} after ${totalDuration}s`);
     return {
       success: false,
       reason: `No valid sheets found in ${filename}.`,
@@ -222,9 +281,8 @@ async function asXlsx({
     };
   }
 
-  console.log(
-    `[SUCCESS]: ${filename} fully processed. Created ${documents.length} document(s).\n`
-  );
+  const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`[XLSX] [${timestamp}] [SUCCESS]: ${filename} fully processed in ${totalDuration}s. Created ${documents.length} document(s).\n`);
   return { success: true, reason: null, documents };
 }
 
